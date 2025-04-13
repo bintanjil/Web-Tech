@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Quality Dashboard</title>
+    <title>Air Quality Index</title>
     <style>
         :root {
-            --primary: #4a89dc;
+            --primary: #0288d1;
             --primary-light: #5d9cec;
-            --secondary: #a0d468;
-            --accent: #ffce54;
-            --danger: #ed5565;
+            --secondary: #4d7142;
+            --accent: #ffcc80;
+            --danger: #7d323f;
             --light: #f5f7fa;
             --lighter: #f9fbfd;
             --text: #434a54;
             --text-light: #656d78;
-            --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-            --radius: 12px;
-            --transition: all 0.3s ease;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --radius: 10px;
+            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         * {
@@ -28,7 +28,7 @@
 
         body {
             font-family: 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #e6e9f0 100%);
+            background-color: #f9f9f9;
             color: var(--text);
             min-height: 100vh;
             display: flex;
@@ -56,30 +56,10 @@
             overflow: hidden;
         }
 
-        header::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
-            transform: rotate(30deg);
-        }
-
         h1 {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 600;
-            margin-bottom: 5px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .subtitle {
-            font-size: 1rem;
-            opacity: 0.9;
-            position: relative;
-            z-index: 2;
+            letter-spacing: 0.5px;
         }
 
         .container {
@@ -88,21 +68,42 @@
             height: 70vh;
         }
 
-        .left-section {
+        .left-section, .right-section {
             flex: 1;
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
 
-        .right-section {
+        .box {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             flex: 1;
             display: flex;
-            flex-direction: column;
-            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
         }
 
-        .card {
+        .box:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .box-1 {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border: 1px solid rgba(77, 113, 66, 0.2);
+        }
+
+        .box-2 {
+            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+            border: 1px solid rgba(125, 50, 63, 0.2);
+        }
+
+        .form-container {
             background: white;
             border-radius: var(--radius);
             box-shadow: var(--shadow);
@@ -110,64 +111,50 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            transition: var(--transition);
-            position: relative;
             overflow: hidden;
         }
 
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+        .form-header {
+            margin-bottom: 20px;
         }
 
-        .air-quality-card {
-            background: linear-gradient(135deg, #a0d468 0%, #8cc152 100%);
-            color: white;
-            justify-content: center;
-            align-items: center;
+        .form-header h2 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 5px;
         }
 
-        .pollution-card {
-            background: linear-gradient(135deg, #ffce54 0%, #f6bb42 100%);
-            color: white;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .form-card {
-            background: white;
-        }
-
-        .info-card {
-            background: linear-gradient(135deg, #e6e9f0 0%, #f5f7fa 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .card-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: var(--text);
-        }
-
-        .card-value {
-            font-size: 3rem;
-            font-weight: 700;
-            margin: 10px 0;
-        }
-
-        .card-description {
-            font-size: 1rem;
-            opacity: 0.9;
+        .form-header p {
+            color: var(--text-light);
+            font-size: 0.9rem;
         }
 
         form {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 15px;
             height: 100%;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        /* Custom scrollbar */
+        form::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        form::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+
+        form::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 3px;
+        }
+
+        form::-webkit-scrollbar-thumb:hover {
+            background: #0277bd;
         }
 
         .form-group {
@@ -183,10 +170,10 @@
         }
 
         input, select {
-            padding: 14px;
-            border: 1px solid #e6e9f0;
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             transition: var(--transition);
             background-color: var(--lighter);
         }
@@ -194,55 +181,47 @@
         input:focus, select:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(74, 137, 220, 0.2);
+            box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
         }
 
         button {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, #039be5 100%);
             color: white;
             border: none;
-            padding: 16px;
+            padding: 14px;
             border-radius: 8px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: var(--transition);
-            margin-top: auto;
+            margin-top: 10px;
         }
 
         button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(74, 137, 220, 0.3);
+            background: linear-gradient(135deg, #0277bd 0%, #0288d1 100%);
+            box-shadow: 0 4px 12px rgba(2, 136, 209, 0.2);
         }
 
         .checkbox-container {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin: 10px 0;
+            margin: 5px 0;
         }
 
         .checkbox-container input {
-            width: 18px;
-            height: 18px;
+            width: 16px;
+            height: 16px;
             accent-color: var(--primary);
         }
 
-        .info-content {
-            text-align: center;
-            padding: 20px;
+        .checkbox-container label {
+            font-size: 0.85rem;
         }
 
-        .info-icon {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            color: var(--primary);
-        }
-
-        .info-text {
-            font-size: 1.1rem;
-            color: var(--text-light);
-            line-height: 1.6;
+        .footer-box {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            border: 1px solid rgba(255, 204, 128, 0.3);
         }
 
         @media (max-width: 768px) {
@@ -252,7 +231,7 @@
             }
             
             h1 {
-                font-size: 2rem;
+                font-size: 1.8rem;
             }
         }
     </style>
@@ -260,51 +239,45 @@
 <body>
     <div class="main-container">
         <header>
-            <h1>Air Quality Dashboard</h1>
-            <p class="subtitle">Monitor and improve your environment's air quality</p>
+            <h1>Air Quality Index</h1>
         </header>
 
         <div class="container">
             <div class="left-section">
-                <div class="card air-quality-card">
-                    <div class="card-value">78</div>
-                    <div class="card-description">Air Quality Index</div>
-                    <div class="card-description">Good</div>
-                </div>
-                <div class="card pollution-card">
-                    <div class="card-value">32</div>
-                    <div class="card-description">Pollution Level</div>
-                    <div class="card-description">Moderate</div>
-                </div>
+                <div class="box box-1"></div>
+                <div class="box box-2"></div>
             </div>
 
             <div class="right-section">
-                <div class="card form-card">
-                    <h2 class="card-title">Create Your Account</h2>
+                <div class="form-container">
+                    <div class="form-header">
+                        <h2>Create Account</h2>
+                        <p>Monitor air quality in your area</p>
+                    </div>
                     <form onsubmit="return validateForm()">
                         <div class="form-group">
                             <label for="fname">Full Name</label>
-                            <input type="text" id="fname" name="fname" placeholder="Enter your full name">
+                            <input type="text" id="fname" name="fname">
                         </div>
                         <div class="form-group">
-                            <label for="email">Email Address</label>
-                            <input type="email" id="email" name="email" placeholder="Enter your email">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email">
                         </div>
                         <div class="form-group">
                             <label for="password">Password</label>
-                            <input type="password" id="password" name="password" placeholder="Create a password">
+                            <input type="password" id="password" name="password">
                         </div>
                         <div class="form-group">
                             <label for="confirm_password">Confirm Password</label>
-                            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password">
+                            <input type="password" id="confirm_password" name="confirm_password">
                         </div>
                         <div class="form-group">
                             <label for="location">Location</label>
-                            <input type="text" id="location" name="location" placeholder="Your location">
+                            <input type="text" id="location" name="location">
                         </div>
                         <div class="form-group">
                             <label for="zip">Zip Code</label>
-                            <input type="text" id="zip" name="zip" placeholder="Enter zip code">
+                            <input type="text" id="zip" name="zip">
                         </div>
                         <div class="form-group">
                             <label for="city">Preferred City</label>
@@ -321,17 +294,12 @@
                         </div>
                         <div class="checkbox-container">
                             <input type="checkbox" id="terms" name="terms">
-                            <label for="terms">I agree to the terms and conditions</label>
+                            <label for="terms">I agree to the terms</label>
                         </div>
-                        <button type="submit">Get Started</button>
+                        <button type="submit">Submit</button>
                     </form>
                 </div>
-                <div class="card info-card">
-                    <div class="info-content">
-                        <div class="info-icon">🌱</div>
-                        <p class="info-text">Join our community to monitor air quality in your area and receive personalized recommendations for a healthier environment.</p>
-                    </div>
-                </div>
+                <div class="box footer-box"></div>
             </div>
         </div>
     </div>
