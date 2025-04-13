@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Quality Dashboard</title>
+    <style>
+        :root {
+            --primary: #4a89dc;
+            --primary-light: #5d9cec;
+            --secondary: #a0d468;
+            --accent: #ffce54;
+            --danger: #ed5565;
+            --light: #f5f7fa;
+            --lighter: #f9fbfd;
+            --text: #434a54;
+            --text-light: #656d78;
+            --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+            --radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e6e9f0 100%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            padding: 25px;
+            border-radius: var(--radius);
+            text-align: center;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+            transform: rotate(30deg);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            height: 70vh;
+        }
+
+        .left-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .right-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 25px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+        }
+
+        .air-quality-card {
+            background: linear-gradient(135deg, #a0d468 0%, #8cc152 100%);
+            color: white;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pollution-card {
+            background: linear-gradient(135deg, #ffce54 0%, #f6bb42 100%);
+            color: white;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .form-card {
+            background: white;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #e6e9f0 0%, #f5f7fa 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--text);
+        }
+
+        .card-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .card-description {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-light);
+        }
+
+        input, select {
+            padding: 14px;
+            border: 1px solid #e6e9f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: var(--transition);
+            background-color: var(--lighter);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(74, 137, 220, 0.2);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: auto;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 137, 220, 0.3);
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .checkbox-container input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        .info-content {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .info-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .info-text {
+            font-size: 1.1rem;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <header>
+            <h1>Air Quality Dashboard</h1>
+            <p class="subtitle">Monitor and improve your environment's air quality</p>
+        </header>
+
+        <div class="container">
+            <div class="left-section">
+                <div class="card air-quality-card">
+                    <div class="card-value">78</div>
+                    <div class="card-description">Air Quality Index</div>
+                    <div class="card-description">Good</div>
+                </div>
+                <div class="card pollution-card">
+                    <div class="card-value">32</div>
+                    <div class="card-description">Pollution Level</div>
+                    <div class="card-description">Moderate</div>
+                </div>
+            </div>
+
+            <div class="right-section">
+                <div class="card form-card">
+                    <h2 class="card-title">Create Your Account</h2>
+                    <form onsubmit="return validateForm()">
+                        <div class="form-group">
+                            <label for="fname">Full Name</label>
+                            <input type="text" id="fname" name="fname" placeholder="Enter your full name">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input type="email" id="email" name="email" placeholder="Enter your email">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="password" placeholder="Create a password">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm_password">Confirm Password</label>
+                            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password">
+                        </div>
+                        <div class="form-group">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" name="location" placeholder="Your location">
+                        </div>
+                        <div class="form-group">
+                            <label for="zip">Zip Code</label>
+                            <input type="text" id="zip" name="zip" placeholder="Enter zip code">
+                        </div>
+                        <div class="form-group">
+                            <label for="city">Preferred City</label>
+                            <select id="city" name="city">
+                                <option value="">Select City</option>
+                                <option value="dhaka">Dhaka</option>
+                                <option value="ctg">Chattagram</option>
+                                <option value="khulna">Khulna</option>
+                                <option value="rangpur">Rangpur</option>
+                                <option value="rajshahi">Rajshahi</option>
+                                <option value="barishal">Barishal</option>
+                                <option value="comilla">Comilla</option>
+                            </select>
+                        </div>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="terms" name="terms">
+                            <label for="terms">I agree to the terms and conditions</label>
+                        </div>
+                        <button type="submit">Get Started</button>
+                    </form>
+                </div>
+                <div class="card info-card">
+                    <div class="info-content">
+                        <div class="info-icon">🌱</div>
+                        <p class="info-text">Join our community to monitor air quality in your area and receive personalized recommendations for a healthier environment.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function validateForm() {
+            var fname = document.getElementById("fname").value;
+            var email = document.getElementById("email").value;
+            var password = document.getElementById("password").value;
+            var confirmPassword = document.getElementById("confirm_password").value;
+            var location = document.getElementById("location").value;
+            var zip = document.getElementById("zip").value;
+            var city = document.getElementById("city").value;
+            var terms = document.getElementById("terms").checked;
+
+            var namePattern = /^[A-Za-z\s]+$/;
+            var zipPattern = /^\d{4}$/;
+
+            if (fname == "") {
+                alert("Full Name must be filled out");
+                return false;
+            }
+            if (!namePattern.test(fname)) {
+                alert("Invalid Name");
+                return false;
+            }
+            if (email == "") {
+                alert("Email must be filled out");
+                return false;
+            }
+            if (!email.includes("@")) {
+                alert("Please enter a valid email address");
+                return false;
+            }
+            if (password == "") {
+                alert("Missing Password");
+                return false;
+            }
+            if (confirmPassword == "") {
+                alert("Please confirm your password");
+                return false;
+            }
+            if (password !== confirmPassword) {
+                alert("Passwords do not match");
+                return false;
+            }
+            if (location == "") {
+                alert("Location must be filled out");
+                return false;
+            }
+            if (zip == "") {
+                alert("Zip Code must be filled out");
+                return false;
+            }
+            if (!zipPattern.test(zip)) {
+                alert("Invalid Zip Code. Zip code must be 4 digits.");
+                return false;
+            }
+            if (city == "") {
+                alert("Please select a city");
+                return false;
+            }
+            if (!terms) {
+                alert("You must agree to the terms and conditions");
+                return false;
+            }
+
+            return true;
+        }
+    </script>
+</body>
+</html>
