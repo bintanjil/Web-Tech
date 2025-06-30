@@ -1,25 +1,89 @@
+<?php
+session_start();
+
+// Database configuration - ENSURE THIS MATCHES YOUR ACTUAL DATABASE SETUP
+$host = 'localhost';
+$dbname = 'air_quality_index'; // Consistent database name
+$username = 'root'; // Change as per your setup
+$password = ''; // Change as per your setup
+
+$rememberedEmail = '';
+$loginError = '';
+$registrationSuccess = ''; // For displaying registration messages
+
+// Check if there's a remembered email in cookies
+if (isset($_COOKIE['remembered_email'])) {
+    $rememberedEmail = htmlspecialchars($_COOKIE['remembered_email']);
+}
+
+// Check if registration was successful (from process.php redirect)
+if (isset($_SESSION['registration_success_message'])) {
+    $registrationSuccess = $_SESSION['registration_success_message'];
+    unset($_SESSION['registration_success_message']); // Clear it after displaying
+}
+
+
+// Process login form
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['login'])) {
+    try {
+        // Establish PDO connection
+        $conn = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $email = $_POST['login_email'];
+        $submittedPassword = $_POST['login_password'];
+        $remember = isset($_POST['remember']) ? true : false;
+
+        // Input validation for login (basic)
+        if (empty($email) || empty($submittedPassword)) {
+            $loginError = "Please enter both email and password.";
+        } else {
+            // Find user in database (table name 'user')
+            $stmt = $conn->prepare("SELECT id, email, full_name, password_hash FROM user WHERE email = :email");
+            $stmt->bindParam(':email', $email);
+            $stmt->execute();
+            
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Verify password using password_hash() and password_verify()
+            if ($user && password_verify($submittedPassword, $user['password_hash'])) {
+                // Login successful
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_email'] = $user['email'];
+                $_SESSION['user_name'] = $user['full_name'];
+                
+                // Remember email if requested
+                if ($remember) {
+                    $expire = time() + 30 * 24 * 60 * 60; // 30 days
+                    setcookie('remembered_email', $email, $expire, '/');
+                } else {
+                    // Clear remember cookie if not requested or if it exists
+                    if (isset($_COOKIE['remembered_email'])) {
+                        setcookie('remembered_email', '', time() - 3600, '/');
+                    }
+                }
+                
+                // Redirect to request page
+                header("Location: request.php"); // Make sure request.php exists and is your intended dashboard
+                exit();
+            } else {
+                $loginError = "Invalid email or password.";
+            }
+        }
+    } catch(PDOException $e) {
+        $loginError = "Database error: " . $e->getMessage();
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Air Quality Index</title>
+    <title>Air Quality Monitoring Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary: #0288d1;
-            --primary-light: #5d9cec;
-            --secondary: #4d7142;
-            --accent: #ffcc80;
-            --danger: #7d323f;
-            --light: #f5f7fa;
-            --lighter: #f9fbfd;
-            --text: #434a54;
-            --text-light: #656d78;
-            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            --radius: 10px;
-            --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
+        /* General Reset & Body */
         * {
             margin: 0;
             padding: 0;
@@ -27,348 +91,491 @@
         }
 
         body {
-            font-family: 'verdana','cursive', 'arial' ,'Roboto', sans-serif;
-            background-color: #f9f9f9;
-            color: var(--text);
-            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2c3e50;
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 100vh;
             padding: 20px;
         }
 
+        /* Main Container Layout */
         .main-container {
-            width: 100%;
-            max-width: 1200px;
+            width: 90%;
+            max-width: 1400px;
             display: flex;
             flex-direction: column;
             gap: 20px;
         }
 
+        /* Header Styles */
         header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            background: linear-gradient(135deg, #0288d1, #025e8f);
             color: white;
-            padding: 25px;
-            border-radius: var(--radius);
+            padding: 25px 20px;
             text-align: center;
-            box-shadow: var(--shadow);
+            border-radius: 10px;
             position: relative;
-            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .top-banner {
+            width: 100%;
+            max-height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 15px;
         }
 
-        h1 {
+        header h1 {
             font-size: 2.2rem;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
+        header p {
+            font-size: 1rem;
+            opacity: 0.9;
+        }
+
+        /* Main Content Container */
         .container {
             display: flex;
             gap: 20px;
-            height: 70vh;
+            flex-wrap: wrap;
         }
 
-        .left-section, .right-section {
+        /* Left and Right Panel Sizing */
+        .left-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 400px;
+        }
+
+        .right-section {
             flex: 1;
             display: flex;
             flex-direction: column;
             gap: 20px;
+            min-width: 300px;
         }
 
-        .box {
+        /* Box and Form Container General Styles */
+        .box, .form-container {
             background: white;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-            transition: var(--transition);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+            flex-grow: 1;
         }
-
+        
         .box:hover {
             transform: translateY(-3px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
         }
 
+        /* Specific Box Styles */
         .box-1 {
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-            border: 1px solid rgba(77, 113, 66, 0.2);
+            background: #e8f5e9;
+            font-size: 0.9em;
+            overflow-x: auto;
         }
 
         .box-2 {
-            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-            border: 1px solid rgba(125, 50, 63, 0.2);
-        }
-
-        .form-container {
-            background: white;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 25px;
-            flex: 1;
+            background: #ffebee;
             display: flex;
             flex-direction: column;
-            overflow: hidden;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
         }
 
-        .form-header {
+        .box-2 h3 {
+            color: #d32f2f;
+            margin-bottom: 10px;
+            font-size: 1.4rem;
+        }
+
+        .box-2 p {
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Form Header Styles */
+        .form-container h2 {
+            color: #0288d1;
             margin-bottom: 20px;
-        }
-
-        .form-header h2 {
-            font-size: 1.5rem;
-            color: var(--primary);
-            margin-bottom: 5px;
-        }
-
-        .form-header p {
-            color: var(--text-light);
-            font-size: 0.9rem;
-        }
-
-        form {
+            font-size: 1.8rem;
+            text-align: center;
             display: flex;
-            flex-direction: column;
-            gap: 15px;
-            height: 100%;
-            overflow-y: auto;
-            padding-right: 10px;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
-        /* Custom scrollbar */
-        form::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        form::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-
-        form::-webkit-scrollbar-thumb {
-            background: var(--primary);
-            border-radius: 3px;
-        }
-
-        form::-webkit-scrollbar-thumb:hover {
-            background: #0277bd;
-        }
-
+        /* Form Group & Input Styles */
         .form-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+            margin-bottom: 15px;
         }
 
         label {
             font-size: 0.9rem;
+            color: #555;
             font-weight: 500;
-            color: var(--text-light);
+            display: block;
+            margin-bottom: 5px;
         }
 
-        input, select {
-            padding: 12px 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            transition: var(--transition);
-            background-color: var(--lighter);
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         input:focus, select:focus {
+            border-color: #0288d1;
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.1);
+            box-shadow: 0 0 0 2px rgba(2, 136, 209, 0.2);
+        }
+        /* Input focus animation class */
+        .form-group.focused input,
+        .form-group.focused select {
+            border-color: #0288d1;
+            box-shadow: 0 0 0 3px rgba(2, 136, 209, 0.3);
         }
 
+        /* Button Styles */
         button {
-            background: linear-gradient(135deg, var(--primary) 0%, #039be5 100%);
+            background: linear-gradient(to right, #0288d1, #0277bd);
             color: white;
+            padding: 12px;
             border: none;
-            padding: 14px;
-            border-radius: 8px;
+            border-radius: 5px;
+            margin-top: 15px;
             font-size: 1rem;
-            font-weight: 600;
             cursor: pointer;
-            transition: var(--transition);
-            margin-top: 10px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
         button:hover {
-            background: linear-gradient(135deg, #0277bd 0%, #0288d1 100%);
-            box-shadow: 0 4px 12px rgba(2, 136, 209, 0.2);
+            background: linear-gradient(to right, #0277bd, #01579b);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
+        /* Checkbox Container */
         .checkbox-container {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin: 5px 0;
-        }
-
-        .checkbox-container input {
-            width: 16px;
-            height: 16px;
-            accent-color: var(--primary);
-        }
-
-        .checkbox-container label {
+            margin-top: 10px;
             font-size: 0.85rem;
+            color: #555;
         }
 
-        .footer-box {
-            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-            border: 1px solid rgba(255, 204, 128, 0.3);
+        .checkbox-container a {
+            color: #0288d1;
+            text-decoration: none;
         }
 
-        @media (max-width: 768px) {
+        .checkbox-container a:hover {
+            text-decoration: underline;
+        }
+
+        /* Table specific styles for AQI data */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #0288d1;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+
+        tr:hover {
+            background-color: #e3f2fd;
+        }
+
+        /* Login specific styles */
+        .login-container {
+            margin-top: 20px;
+        }
+        
+        .form-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .form-footer a {
+            color: #0288d1;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .form-footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Error and Success Messages */
+        .error-message { /* For specific field errors */
+            color: #e53935;
+            font-size: 0.85rem;
+            margin-top: 5px;
+            min-height: 20px;
+        }
+        .form-error-message { /* For general form errors from showError function */
+            background-color: #ffebee;
+            color: #e53935;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: opacity 0.5s ease-out;
+        }
+
+        .success-message {
+            color: #2e7d32;
+            font-size: 0.95rem;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 500;
+        }
+
+        /* Input error highlighting */
+        .input-error {
+            border-color: #e53935 !important; /* Override default border */
+            box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.2) !important; /* Override default shadow */
+        }
+
+        /* Color Picker */
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        input[type="color"] {
+            width: 50px;
+            height: 40px;
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 992px) {
             .container {
                 flex-direction: column;
-                height: auto;
             }
-            
-            h1 {
+            .left-panel, .right-section {
+                min-width: unset;
+                width: 100%;
+            }
+            .main-container {
+                width: 95%;
+            }
+        }
+        @media (max-width: 600px) {
+            header h1 {
                 font-size: 1.8rem;
+            }
+            .form-container h2 {
+                font-size: 1.5rem;
+            }
+            button {
+                font-size: 0.9rem;
+                padding: 10px;
             }
         }
     </style>
 </head>
-<body style="background-color: slategray; ">
+<body>
     <div class="main-container">
         <header>
-            <h1>Air Quality Index</h1>
+            <img src="images.png" alt="Air Quality Banner" class="top-banner">
+            <h1><i class="fas fa-wind"></i> Air Quality Monitoring Dashboard</h1>
+            <p>Real-time air quality data for major cities in Bangladesh</p>
         </header>
 
         <div class="container">
-            <div class="left-section">
-                <div class="box box-1"></div>
-                <div class="box box-2"></div>
+            <div class="left-panel">
+                <div class="box box-1">
+                    <h3><i class="fas fa-chart-bar"></i> Air Quality Index Data</h3>
+                    <p>Current AQI measurements for major cities:</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>City</th>
+                                <th>Air Quality Index</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Dhaka</td><td>150</td></tr>
+                            <tr><td>Tangail</td><td>120</td></tr>
+                            <tr><td>Rajshahi</td><td>130</td></tr>
+                            <tr><td>Khulna</td><td>140</td></tr>
+                            <tr><td>Sylhet</td><td>110</td></tr>
+                            <tr><td>Barishal</td><td>160</td></tr>
+                            <tr><td>Rangpur</td><td>170</td></tr>
+                            <tr><td>Mymenshing</td><td>180</td></tr>       
+                            <tr><td>Gazipur</td><td>190</td></tr>
+                            <tr><td>Cox's Bazar</td><td>200</td></tr>      
+                        </tbody>
+                    </table>
+                </div>
+                <div class="box box-2">
+                    <div>
+                        <i class="fas fa-info-circle fa-2x"></i>
+                        <h3>AQI Scale</h3>
+                        <p>0-50: Good | 51-100: Moderate<br>
+                        101-150: Unhealthy for Sensitive Groups<br>
+                        151-200: Unhealthy | 201-300: Very Unhealthy<br>
+                        301+: Hazardous</p>
+                    </div>
+                </div>
             </div>
 
             <div class="right-section">
                 <div class="form-container">
-                    <div class="form-header">
-                        <h2>Create Account</h2>
-                        <p>Monitor air quality in your area</p>
-                    </div>
-                    <form onsubmit="return validateForm()">
+                    <h2><i class="fas fa-user-plus"></i> Create Account</h2>
+                    <form action="process.php" method="POST" onsubmit="return validateForm()">
                         <div class="form-group">
-                            <label for="fname">Full Name</label>
-                            <input type="text" id="fname" name="fname">
+                            <label for="fname"><i class="fas fa-user"></i> Full Name</label>
+                            <input type="text" id="fname" name="fname" placeholder="Enter your full name">
+                            <div id="fname-error" class="error-message"></div>
                         </div>
                         <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" id="email" name="email">
+                            <label for="email"><i class="fas fa-envelope"></i> Email</label>
+                            <input type="email" id="email" name="email" placeholder="xx-xxxxx-x@student.aiub.edu">
+                            <div id="email-error" class="error-message"></div>
                         </div>
                         <div class="form-group">
-                            <label for="password">Password</label>
-                            <input type="password" id="password" name="password">
+                            <label for="password"><i class="fas fa-lock"></i> Password</label>
+                            <input type="password" id="password" name="password" placeholder="exactly 8 digits (0-9)">
+                            <div id="password-error" class="error-message"></div>
                         </div>
                         <div class="form-group">
-                            <label for="confirm_password">Confirm Password</label>
-                            <input type="password" id="confirm_password" name="confirm_password">
+                            <label for="confirm_password"><i class="fas fa-check-circle"></i> Confirm Password</label>
+                            <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your password">
+                            <div id="confirm-password-error" class="error-message"></div>
                         </div>
                         <div class="form-group">
-                            <label for="location">Location</label>
-                            <input type="text" id="location" name="location">
+                            <label for="location"><i class="fas fa-map-marker-alt"></i> Location</label>
+                            <input type="text" id="location" name="location" placeholder="Your current location">
+                            <div id="location-error" class="error-message"></div>
                         </div>
                         <div class="form-group">
-                            <label for="zip">Zip Code</label>
-                            <input type="text" id="zip" name="zip">
+                            <label for="zip"><i class="fas fa-map-pin"></i> Zip Code</label>
+                            <input type="text" id="zip" name="zip" placeholder="4-digit zip code">
+                            <div id="zip-error" class="error-message"></div>
                         </div>
                         <div class="form-group">
-                            <label for="city">Preferred City</label>
+                            <label for="city"><i class="fas fa-city"></i> Preferred City</label>
                             <select id="city" name="city">
                                 <option value="">Select City</option>
-                                <option value="dhaka">Dhaka</option>
-                                <option value="ctg">Chattagram</option>
-                                <option value="khulna">Khulna</option>
-                                <option value="rangpur">Rangpur</option>
-                                <option value="rajshahi">Rajshahi</option>
-                                <option value="barishal">Barishal</option>
-                                <option value="comilla">Comilla</option>
+                                <option value="Dhaka">Dhaka</option>
+                                <option value="Chittagong">Chittagong</option>
+                                <option value="Khulna">Khulna</option>
+                                <option value="Rangpur">Rangpur</option>
+                                <option value="Rajshahi">Rajshahi</option>
+                                <option value="Barishal">Barishal</option>
+                                <option value="Comilla">Comilla</option>
+                                <option value="Tangail">Tangail</option>
+                                <option value="Sylhet">Sylhet</option>
+                                <option value="Mymenshing">Mymenshing</option>
+                                <option value="Gazipur">Gazipur</option>
+                                <option value="Cox's Bazar">Cox's Bazar</option>
                             </select>
+                            <div id="city-error" class="error-message"></div>
+                        </div>
+                         <div class="form-group">
+                            <label><i class="fas fa-palette"></i> Favorite Color</label>
+                            <div class="color-picker-container">
+                                <input type="color" id="favcolor" name="favcolor" value="#0288d1">
+                                <span class="color-preview" id="colorPreview"></span>
+                            </div>
                         </div>
                         <div class="checkbox-container">
                             <input type="checkbox" id="terms" name="terms">
-                            <label for="terms">I agree to the terms</label>
+                            <label for="terms">I agree to the <a href="#">terms and conditions</a></label>
+                            <div id="terms-error" class="error-message"></div>
                         </div>
-                        <button type="submit">Submit</button>
+                        <button type="submit"><i class="fas fa-paper-plane"></i> Submit</button>
+                        <?php if (!empty($registrationSuccess)): ?>
+                            <div id="form-submission-message" class="success-message"><?php echo $registrationSuccess; ?></div>
+                        <?php endif; ?>
                     </form>
                 </div>
-                <div class="box footer-box"></div>
+
+                <div class="form-container login-container">
+                    <h2><i class="fas fa-sign-in-alt"></i> Log In</h2>
+                    <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="POST">
+                        <div class="form-group">
+                            <label for="login_email"><i class="fas fa-envelope"></i> Email</label>
+                            <input type="email" id="login_email" name="login_email" placeholder="Enter your email" value="<?php echo $rememberedEmail; ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="login_password"><i class="fas fa-lock"></i> Password</label>
+                            <input type="password" id="login_password" name="login_password" placeholder="Enter your password" required>
+                        </div>
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="remember" name="remember" <?php echo !empty($rememberedEmail) ? 'checked' : ''; ?>>
+                            <label for="remember">Remember me</label>
+                        </div>
+                        <button type="submit" name="login"><i class="fas fa-sign-in-alt"></i> Log In</button>
+                        <?php if (!empty($loginError)): ?>
+                            <div class="error-message" style="text-align: center;"><?php echo $loginError; ?></div>
+                        <?php endif; ?>
+                    </form>
+                    <div class="form-footer">
+                        <p>Don't have an account? <a href="#" id="show-register">Register Now</a></p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script>
-        function validateForm() {
-            var fname = document.getElementById("fname").value;
-            var email = document.getElementById("email").value;
-            var password = document.getElementById("password").value;
-            var confirmPassword = document.getElementById("confirm_password").value;
-            var location = document.getElementById("location").value;
-            var zip = document.getElementById("zip").value;
-            var city = document.getElementById("city").value;
-            var terms = document.getElementById("terms").checked;
-
-            var namePattern = /^[A-Za-z\s]+$/;
-            var zipPattern = /^\d{4}$/;
-
-            if (fname == "") {
-                alert("Full Name must be filled out");
-                return false;
-            }
-            if (!namePattern.test(fname)) {
-                alert("Invalid Name");
-                return false;
-            }
-            if (email == "") {
-                alert("Email must be filled out");
-                return false;
-            }
-            if (!email.includes("@")) {
-                alert("Please enter a valid email address");
-                return false;
-            }
-            if (password == "") {
-                alert("Missing Password");
-                return false;
-            }
-            if (confirmPassword == "") {
-                alert("Please confirm your password");
-                return false;
-            }
-            if (password !== confirmPassword) {
-                alert("Passwords do not match");
-                return false;
-            }
-            if (location == "") {
-                alert("Location must be filled out");
-                return false;
-            }
-            if (zip == "") {
-                alert("Zip Code must be filled out");
-                return false;
-            }
-            if (!zipPattern.test(zip)) {
-                alert("Invalid Zip Code. Zip code must be 4 digits.");
-                return false;
-            }
-            if (city == "") {
-                alert("Please select a city");
-                return false;
-            }
-            if (!terms) {
-                alert("You must agree to the terms and conditions");
-                return false;
-            }
-
-            return true;
-        }
-    </script>
+    <script src="js/script.js"></script>
 </body>
 </html>
